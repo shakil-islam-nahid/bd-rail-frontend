@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BD Rail Track | বাংলাদেশ রেলওয়ে ট্র্যাকার</title>
+
+<!-- Leaflet Real Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Bangla&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235;
+  --border: #1e2d45; --accent: #00c896; --accent2: #ff6b35;
+  --text: #e8edf5; --muted: #5a7090;
+  --green: #00c896; --yellow: #ffd166; --red: #ef476f;
+}
+html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+
+/* ---- HEADER ---- */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 10px 20px; display: flex; align-items: center; gap: 14px;
+  height: 58px; position: relative; z-index: 1000;
+}
+.logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), #00a87a);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.logo-title { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+.logo-sub { font-size: 10px; color: var(--muted); }
+
+.search-wrap { flex: 1; max-width: 380px; position: relative; }
+.search-wrap input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px 8px 34px; color: var(--text);
+  font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none;
+  transition: border-color 0.2s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap input::placeholder { color: var(--muted); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
+.search-results {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  display: none; z-index: 2000; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.search-results.show { display: block; }
+.sr-item {
+  padding: 9px 12px; cursor: pointer; display: flex; align-items: center;
+  gap: 10px; font-size: 12px; transition: background 0.15s; border-bottom: 1px solid var(--border);
+}
+.sr-item:last-child { border-bottom: none; }
+.sr-item:hover { background: var(--surface); }
+.sr-num { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent); background: rgba(0,200,150,0.1); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.sr-status { margin-left: auto; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
+.sr-status.running { background: rgba(0,200,150,0.15); color: var(--green); }
+.sr-status.delayed { background: rgba(255,209,102,0.15); color: var(--yellow); }
+
+.hstats { display: flex; gap: 14px; margin-left: auto; flex-shrink: 0; }
+.hstat { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.hdot { width: 7px; height: 7px; border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+.last-update { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+/* ---- LAYOUT ---- */
+.main { display: flex; height: calc(100vh - 58px); }
+
+/* ---- SIDEBAR ---- */
+.sidebar {
+  width: 270px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.3s;
+}
+.sidebar.collapsed { width: 0; }
+.sidebar-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-size: 10px; font-weight: 600; letter-spacing: 1px;
+  color: var(--muted); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;
+}
+.sidebar-head span { font-size: 11px; color: var(--accent); font-family: 'Space Mono', monospace; }
+.train-list { flex: 1; overflow-y: auto; padding: 8px; }
+.train-list::-webkit-scrollbar { width: 3px; }
+.train-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+.tcard {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 11px 12px; margin-bottom: 7px; cursor: pointer; transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.tcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.tcard.running::before { background: var(--green); }
+.tcard.delayed::before { background: var(--yellow); }
+.tcard.arrived::before { background: var(--muted); }
+.tcard:hover, .tcard.active { border-color: var(--accent); background: rgba(0,200,150,0.04); }
+.tc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.tc-name { font-size: 12px; font-weight: 600; }
+.tc-num { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+.tc-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 500; flex-shrink: 0; }
+.tc-badge.running { background: rgba(0,200,150,0.15); color: var(--green); }
+.tc-badge.delayed { background: rgba(255,209,102,0.15); color: var(--yellow); }
+.tc-badge.arrived { background: rgba(90,112,144,0.15); color: var(--muted); }
+.tc-route { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-bottom: 7px; }
+.tc-arrow { color: var(--accent); }
+.tc-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
+.tc-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #00a87a); transition: width 0.8s ease; border-radius: 2px; }
+.tc-loc { font-size: 9px; color: var(--muted); }
+.tc-loc b { color: var(--accent); font-weight: 500; }
+
+/* ---- MAP ---- */
+.map-wrap { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; }
+
+/* Custom dark map filter */
+.leaflet-tile { filter: brightness(0.7) saturate(0.6) hue-rotate(180deg) invert(1); }
+.leaflet-container { background: var(--bg); }
+
+.map-overlay-tl {
+  position: absolute; top: 10px; left: 10px; z-index: 999;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.live-pill {
+  background: rgba(239,71,111,0.18); border: 1px solid rgba(239,71,111,0.4);
+  border-radius: 20px; padding: 4px 12px; font-size: 10px; color: #ef476f;
+  display: flex; align-items: center; gap: 6px; font-family: 'Space Mono', monospace;
+  backdrop-filter: blur(6px);
+}
+.live-pill .dot { width: 6px; height: 6px; background: #ef476f; border-radius: 50%; animation: blink 1.2s infinite; }
+.approx-pill {
+  background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+  border-radius: 20px; padding: 3px 10px; font-size: 9px; color: var(--muted);
+  backdrop-filter: blur(6px);
+}
+
+/* ---- DETAIL PANEL ---- */
+.detail-panel {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 998;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 14px 18px 16px; display: none;
+  animation: slideUp 0.25s ease;
+}
+.detail-panel.open { display: block; }
+@keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+.dp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.dp-title { font-size: 15px; font-weight: 600; }
+.dp-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.dp-meta { display: flex; gap: 12px; margin-top: 4px; }
+.dp-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+.dp-tag.running { background: rgba(0,200,150,0.15); color: var(--green); }
+.dp-tag.delayed { background: rgba(255,209,102,0.15); color: var(--yellow); }
+.dp-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+.dp-close:hover { color: var(--text); }
+
+.timeline { display: flex; align-items: flex-start; overflow-x: auto; padding-bottom: 6px; gap: 0; }
+.timeline::-webkit-scrollbar { height: 3px; }
+.timeline::-webkit-scrollbar-thumb { background: var(--border); }
+.tstop { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; min-width: 72px; position: relative; }
+.tstop-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); background: var(--bg); z-index: 2; }
+.tstop-dot.done { border-color: var(--accent); background: var(--accent); }
+.tstop-dot.here { border-color: var(--accent2); background: var(--accent2); box-shadow: 0 0 10px var(--accent2); animation: glow 1.5s infinite; }
+@keyframes glow { 0%,100%{box-shadow:0 0 6px var(--accent2)} 50%{box-shadow:0 0 16px var(--accent2)} }
+.tstop-name { font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center; max-width: 70px; line-height: 1.2; }
+.tstop-name.done { color: var(--accent); }
+.tstop-name.here { color: var(--accent2); font-weight: 600; }
+.tstop-time { font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted); margin-top: 3px; }
+.tconn { flex: 1; min-width: 16px; height: 2px; background: var(--border); margin-top: 4px; }
+.tconn.done { background: var(--accent); }
+
+.dp-eta { margin-top: 12px; padding: 8px 12px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.eta-label { font-size: 10px; color: var(--muted); }
+.eta-val { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 700; }
+
+/* Loading */
+.loading { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+.loading .icon { font-size: 48px; animation: trainMove 1s infinite alternate; margin-bottom: 16px; }
+@keyframes trainMove { from{transform:translateX(-10px)} to{transform:translateX(10px)} }
+.loading p { color: var(--muted); font-size: 13px; font-family: 'Space Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div class="loading" id="loading">
+  <div class="icon">🚆</div>
+  <p>ট্র্যাকার লোড হচ্ছে...</p>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">🚆</div>
+    <div>
+      <div class="logo-title">BD RAIL TRACK</div>
+      <div class="logo-sub">বাংলাদেশ রেলওয়ে ট্র্যাকার</div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="ট্রেনের নাম বা নম্বর লিখুন..." autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <div class="hstats">
+    <div class="hstat"><div class="hdot" style="background:var(--green)"></div><span id="cntRunning">0</span> চলছে</div>
+    <div class="hstat"><div class="hdot" style="background:var(--yellow)"></div><span id="cntDelayed">0</span> বিলম্বিত</div>
+  </div>
+  <div class="last-update" id="lastUpdate">--:--</div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      Active Trains
+      <span id="trainCount">0</span>
+    </div>
+    <div class="train-list" id="trainList"></div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-overlay-tl">
+      <div class="live-pill"><div class="dot"></div>LIVE</div>
+      <div class="approx-pill">⚠️ Estimated position — Real-time GPS নয়</div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="dp-header">
+        <div>
+          <div class="dp-title" id="dpName"></div>
+          <div class="dp-sub" id="dpSub"></div>
+          <div class="dp-meta"><span class="dp-tag" id="dpStatus"></span></div>
+        </div>
+        <button class="dp-close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="timeline" id="dpTimeline"></div>
+      <div class="dp-eta">
+        <div class="eta-label" id="dpEtaLabel">গন্তব্যে পৌঁছাবে</div>
+        <div class="eta-val" id="dpEta">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==============================================
+// CONFIG — Backend URL change করো deploy করার পর
+// ==============================================
+const API_BASE = 'https://bd-rail-backend.onrender.com'; // ← Render.com URL দিয়ে replace করো
+
+// ==============================================
+// STATE
+// ==============================================
+let allTrains = [];
+let markers = {};
+let selectedId = null;
+let map;
+
+// ==============================================
+// MAP INIT (Real OpenStreetMap via Leaflet)
+// ==============================================
+function initMap() {
+  map = L.map('map', {
+    center: [23.8, 90.3],
+    zoom: 7,
+    zoomControl: false,
+    attributionControl: false
+  });
+
+  // Dark tile layer using CartoDB dark
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO',
+    maxZoom: 19
+  }).addTo(map);
+
+  L.control.zoom({ position: 'topright' }).addTo(map);
+  L.control.attribution({ position: 'bottomright', prefix: false }).addTo(map);
+}
+
+// Custom train icon
+function trainIcon(color, isSelected) {
+  const size = isSelected ? 36 : 28;
+  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="18" cy="18" r="17" fill="${color}" fill-opacity="${isSelected ? '0.3' : '0.15'}" stroke="${color}" stroke-width="${isSelected ? 2.5 : 1.5}"/>
+    <text x="18" y="23" font-size="16" text-anchor="middle" font-family="serif">🚆</text>
+  </svg>`;
+  return L.divIcon({
+    html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2]
+  });
+}
+
+// ==============================================
+// FETCH DATA FROM API
+// ==============================================
+async function fetchTrains() {
+  try {
+    const res = await fetch(`${API_BASE}/api/trains`);
+    const data = await res.json();
+    if (data.success) {
+      allTrains = data.trains;
+      updateUI();
+      document.getElementById('lastUpdate').textContent =
+        new Date().toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'});
+    }
+  } catch (err) {
+    // API unreachable — use demo data
+    console.warn('API unreachable, using demo data');
+    useDemoData();
+  }
+}
+
+// ==============================================
+// DEMO DATA (works offline without backend)
+// ==============================================
+function useDemoData() {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  const STATIONS_DEMO = {
+    Dhaka:{lat:23.7308,lon:90.4194,name:'ঢাকা'},
+    Chittagong:{lat:22.3384,lon:91.8317,name:'চট্টগ্রাম'},
+    Sylhet:{lat:24.8949,lon:91.8687,name:'সিলেট'},
+    Rajshahi:{lat:24.3745,lon:88.6042,name:'রাজশাহী'},
+    Khulna:{lat:22.8456,lon:89.5403,name:'খুলনা'},
+    Mymensingh:{lat:24.7471,lon:90.4203,name:'ময়মনসিংহ'},
+    Comilla:{lat:23.4607,lon:91.1809,name:'কুমিল্লা'},
+    Brahmanbaria:{lat:23.9568,lon:91.1117,name:'ব্রাহ্মণবাড়িয়া'},
+    Akhaura:{lat:23.8786,lon:91.1817,name:'আখাউড়া'},
+    Joydebpur:{lat:23.9999,lon:90.4017,name:'জয়দেবপুর'},
+    Jessore:{lat:23.1667,lon:89.2167,name:'যশোর'},
+    Bogura:{lat:24.8465,lon:89.3773,name:'বগুড়া'},
+    Dinajpur:{lat:25.6279,lon:88.6338,name:'দিনাজপুর'},
+    Feni:{lat:23.0153,lon:91.3960,name:'ফেনী'},
+  };
+
+  const DEMO_TRAINS = [
+    {id:'T701',name:'সুবর্ণ এক্সপ্রেস',number:'701',status:'running',departure:'07:00',arrival:'10:30',
+     route:['Dhaka','Comilla','Feni','Chittagong'],schedule:[0,100,150,210]},
+    {id:'T11',name:'পারাবত এক্সপ্রেস',number:'11',status:'delayed',departure:'06:40',arrival:'12:20',
+     route:['Dhaka','Akhaura','Sylhet'],schedule:[0,120,330]},
+    {id:'T753',name:'সিল্কসিটি এক্সপ্রেস',number:'753',status:'running',departure:'14:40',arrival:'19:10',
+     route:['Dhaka','Joydebpur','Rajshahi'],schedule:[0,40,270]},
+    {id:'T725',name:'সুন্দরবন এক্সপ্রেস',number:'725',status:'delayed',departure:'06:20',arrival:'11:20',
+     route:['Dhaka','Jessore','Khulna'],schedule:[0,200,300]},
+    {id:'T757',name:'দ্রুতযান এক্সপ্রেস',number:'757',status:'running',departure:'09:00',arrival:'11:30',
+     route:['Dhaka','Joydebpur','Mymensingh'],schedule:[0,55,150]},
+    {id:'T705',name:'একতা এক্সপ্রেস',number:'705',status:'running',departure:'10:00',arrival:'17:00',
+     route:['Dhaka','Bogura','Dinajpur'],schedule:[0,310,420]},
+  ];
+
+  function calcPos(train) {
+    const [dH,dM]=train.departure.split(':').map(Number);
+    const dep=dH*60+dM;
+    const totalDur=train.schedule[train.schedule.length-1];
+    let elapsed=nowMin-dep;
+    if(elapsed<0)elapsed+=1440;
+    if(elapsed>totalDur){
+      const ls=STATIONS_DEMO[train.route[train.route.length-1]];
+      return{lat:ls.lat,lon:ls.lon,status:'arrived',progress:100,fromStationName:'—',toStationName:'পৌঁছে গেছে',etaFinal:'পৌঁছে গেছে'};
+    }
+    for(let i=0;i<train.schedule.length-1;i++){
+      if(elapsed>=train.schedule[i]&&elapsed<=train.schedule[i+1]){
+        const p=(elapsed-train.schedule[i])/(train.schedule[i+1]-train.schedule[i]);
+        const a=STATIONS_DEMO[train.route[i]],b=STATIONS_DEMO[train.route[i+1]];
+        const minsLeft=train.schedule[i+1]-elapsed;
+        return{
+          lat:a.lat+(b.lat-a.lat)*p, lon:a.lon+(b.lon-a.lon)*p,
+          status:train.status,
+          progress:Math.round(elapsed/totalDur*100),
+          fromStation:train.route[i], toStation:train.route[i+1],
+          fromStationName:a.name, toStationName:b.name,
+          segmentProgress:Math.round(p*100),
+          minutesToNextStation:Math.round(minsLeft),
+          etaFinal:`${Math.round(minsLeft)} মিনিট`
+        };
+      }
+    }
+    const fs=STATIONS_DEMO[train.route[0]];
+    return{lat:fs.lat,lon:fs.lon,status:'scheduled',progress:0,fromStationName:'এখনো ছাড়েনি',toStationName:'',etaFinal:'—'};
+  }
+
+  allTrains = DEMO_TRAINS.map(t => {
+    const origin=STATIONS_DEMO[t.route[0]],dest=STATIONS_DEMO[t.route[t.route.length-1]];
+    const stops = t.route.map((id,i)=>{
+      const [dH,dM]=t.departure.split(':').map(Number);
+      const total=dH*60+dM+t.schedule[i];
+      const h=Math.floor(total/60)%24,m=total%60;
+      return{id,...STATIONS_DEMO[id],scheduledTime:`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`};
+    });
+    return{...t,origin,destination:dest,stops,position:calcPos(t)};
+  });
+
+  updateUI();
+}
+
+// ==============================================
+// UPDATE ALL UI
+// ==============================================
+function updateUI() {
+  const running = allTrains.filter(t=>t.position?.status==='running').length;
+  const delayed = allTrains.filter(t=>t.position?.status==='delayed').length;
+  document.getElementById('cntRunning').textContent = running;
+  document.getElementById('cntDelayed').textContent = delayed;
+  document.getElementById('trainCount').textContent = allTrains.length;
+  document.getElementById('lastUpdate').textContent =
+    new Date().toLocaleTimeString('bn-BD',{hour:'2-digit',minute:'2-digit'});
+
+  updateSidebar();
+  updateMarkers();
+  if (selectedId) {
+    const t = allTrains.find(x=>x.id===selectedId);
+    if (t) showDetail(t);
+  }
+  document.getElementById('loading').style.display='none';
+}
+
+// ==============================================
+// SIDEBAR
+// ==============================================
+function updateSidebar() {
+  const list = document.getElementById('trainList');
+  allTrains.forEach(train => {
+    const pos = train.position || {};
+    const existing = document.getElementById('card-'+train.id);
+    const statusLabel = pos.status==='running'?'চলছে':pos.status==='delayed'?'বিলম্বিত':pos.status==='arrived'?'পৌঁছেছে':'নির্ধারিত';
+    const barW = (pos.progress||0) + '%';
+    const locText = pos.fromStationName ? `<b>${pos.fromStationName}</b> → ${pos.toStationName||''}` : '—';
+
+    if (existing) {
+      existing.querySelector('.tc-fill').style.width = barW;
+      existing.querySelector('.tc-loc').innerHTML = locText;
+      return;
+    }
+
+    const card = document.createElement('div');
+    card.id = 'card-'+train.id;
+    card.className = `tcard ${pos.status||'scheduled'}${selectedId===train.id?' active':''}`;
+    card.innerHTML = `
+      <div class="tc-top">
+        <div><div class="tc-name">${train.name}</div><div class="tc-num">#${train.number}</div></div>
+        <span class="tc-badge ${pos.status||'scheduled'}">${statusLabel}</span>
+      </div>
+      <div class="tc-route">
+        <span>${train.origin?.name||'—'}</span>
+        <span class="tc-arrow">→</span>
+        <span>${train.destination?.name||'—'}</span>
+      </div>
+      <div class="tc-bar"><div class="tc-fill" style="width:${barW}"></div></div>
+      <div class="tc-loc">${locText}</div>`;
+    card.onclick = () => selectTrain(train);
+    list.appendChild(card);
+  });
+}
+
+// ==============================================
+// MAP MARKERS
+// ==============================================
+function updateMarkers() {
+  allTrains.forEach(train => {
+    const pos = train.position;
+    if (!pos || !pos.lat) return;
+    const color = pos.status==='running'?'#00c896':pos.status==='delayed'?'#ffd166':'#5a7090';
+    const isSel = selectedId===train.id;
+
+    if (markers[train.id]) {
+      markers[train.id].setLatLng([pos.lat, pos.lon]);
+      markers[train.id].setIcon(trainIcon(color, isSel));
+    } else {
+      const m = L.marker([pos.lat, pos.lon], {icon:trainIcon(color, isSel)})
+        .addTo(map)
+        .on('click', ()=>selectTrain(train));
+
+      // Tooltip on hover
+      m.bindTooltip(`
+        <div style="font-family:'DM Sans',sans-serif;font-size:12px;background:#111827;border:1px solid #1e2d45;border-radius:8px;padding:8px 12px;color:#e8edf5;">
+          <b>${train.name}</b><br>
+          <span style="color:#5a7090;font-size:10px">${pos.fromStationName||'—'} → ${pos.toStationName||'—'}</span>
+        </div>`, {
+        permanent: false, direction: 'top', offset: [0, -10],
+        className: 'leaflet-tooltip-custom', opacity: 1
+      });
+      markers[train.id] = m;
+    }
+  });
+}
+
+// ==============================================
+// SELECT TRAIN
+// ==============================================
+function selectTrain(train) {
+  selectedId = train.id;
+  document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('active'));
+  const card = document.getElementById('card-'+train.id);
+  if (card) { card.classList.add('active'); card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  updateMarkers();
+  if (train.position?.lat) map.setView([train.position.lat, train.position.lon], 9, {animate:true});
+  showDetail(train);
+}
+
+function showDetail(train) {
+  const pos = train.position || {};
+  document.getElementById('dpName').textContent = `${train.name} (#${train.number})`;
+  document.getElementById('dpSub').textContent =
+    `${train.origin?.name||'—'} → ${train.destination?.name||'—'} | ছাড়ে ${train.departure||'—'} | পৌঁছায় ${train.arrival||'—'}`;
+  const statusEl = document.getElementById('dpStatus');
+  const statusTxt = pos.status==='running'?'চলছে':pos.status==='delayed'?'বিলম্বিত':'পৌঁছেছে';
+  statusEl.textContent = statusTxt;
+  statusEl.className = `dp-tag ${pos.status||''}`;
+
+  document.getElementById('dpEta').textContent = pos.etaFinal || '—';
+  document.getElementById('dpEtaLabel').textContent =
+    pos.status==='arrived' ? 'গন্তব্যে পৌঁছেছে' : 'পরবর্তী স্টেশনে পৌঁছাবে';
+
+  // Timeline
+  const timeline = document.getElementById('dpTimeline');
+  timeline.innerHTML = '';
+  const stops = train.stops || [];
+  stops.forEach((st, i) => {
+    const isDone = i < stops.findIndex(s=>s.id===pos.toStation);
+    const isHere = st.id === pos.fromStation;
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'tconn' + (isDone?' done':'');
+      timeline.appendChild(conn);
+    }
+    const stop = document.createElement('div');
+    stop.className = 'tstop';
+    stop.innerHTML = `
+      <div class="tstop-dot ${isHere?'here':isDone?'done':''}"></div>
+      <div class="tstop-name ${isHere?'here':isDone?'done':''}">${st.name||st.nameEn||st.id}</div>
+      <div class="tstop-time">${st.scheduledTime||'—'}</div>`;
+    timeline.appendChild(stop);
+  });
+
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  selectedId = null;
+  document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('active'));
+  updateMarkers();
+}
+
+// ==============================================
+// SEARCH
+// ==============================================
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (!q) { searchResults.classList.remove('show'); return; }
+  const found = allTrains.filter(t => t.name.includes(q) || t.number.includes(q) || (t.nameEn||'').toLowerCase().includes(q));
+  searchResults.innerHTML = '';
+  if (!found.length) {
+    searchResults.innerHTML = '<div class="sr-item" style="color:var(--muted)">কোনো ট্রেন পাওয়া যায়নি</div>';
+  } else {
+    found.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'sr-item';
+      const st = t.position?.status||'scheduled';
+      const stTxt = st==='running'?'চলছে':st==='delayed'?'বিলম্বিত':'পৌঁছেছে';
+      item.innerHTML = `<span class="sr-num">${t.number}</span>${t.name}<span class="sr-status ${st}">${stTxt}</span>`;
+      item.onclick = () => { searchInput.value=t.name; searchResults.classList.remove('show'); selectTrain(t); };
+      searchResults.appendChild(item);
+    });
+  }
+  searchResults.classList.add('show');
+});
+document.addEventListener('click', e => { if(!e.target.closest('.search-wrap')) searchResults.classList.remove('show'); });
+
+// ==============================================
+// AUTO REFRESH every 30 seconds
+// ==============================================
+async function refresh() {
+  await fetchTrains();
+}
+
+// ==============================================
+// INIT
+// ==============================================
+(async () => {
+  initMap();
+  await fetchTrains();
+  setInterval(refresh, 30000);
+})();
+</script>
+</body>
+</html>
