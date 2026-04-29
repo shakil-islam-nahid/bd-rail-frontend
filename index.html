@@ -153,6 +153,9 @@ html,body{
 .map-wrap{flex:1;position:relative;overflow:hidden;}
 #map{width:100%;height:100%;}
 
+/* ---- Attribution hide ---- */
+.leaflet-control-attribution{display:none!important;}
+
 .leaflet-tooltip{
   background:var(--surface)!important;border:1px solid var(--border)!important;
   border-radius:8px!important;color:var(--text)!important;
@@ -290,14 +293,45 @@ html,body{
 .modal p{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6;}
 .form-group{margin-bottom:14px;}
 .form-group label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:500;}
-.form-group select{
+.form-group select,.form-group input[type="text"]{
   width:100%;background:var(--surface2);border:1px solid var(--border);
   border-radius:10px;padding:11px 12px;color:var(--text);
   font-size:14px;font-family:'DM Sans',sans-serif;outline:none;
   transition:border-color .2s;-webkit-appearance:none;
 }
-.form-group select:focus{border-color:var(--accent);}
+.form-group select:focus,.form-group input[type="text"]:focus{border-color:var(--accent);}
 .form-group select option{background:var(--surface2);}
+.form-group input[type="text"]::placeholder{color:var(--muted);}
+
+/* Station toggle tabs */
+.station-tabs{display:flex;gap:6px;margin-bottom:8px;}
+.stab{
+  flex:1;padding:7px 10px;border-radius:8px;font-size:11px;font-weight:600;
+  border:1px solid var(--border);background:var(--surface2);color:var(--muted);
+  cursor:pointer;text-align:center;transition:all .18s;font-family:'DM Sans',sans-serif;
+}
+.stab.active{background:rgba(0,200,150,.12);border-color:var(--accent);color:var(--accent);}
+
+/* Custom station suggestions */
+.suggestions{
+  position:relative;
+  margin-top:4px;
+}
+.sug-list{
+  position:absolute;top:0;left:0;right:0;
+  background:var(--surface2);border:1px solid var(--accent);
+  border-radius:10px;z-index:100;max-height:180px;overflow-y:auto;
+  display:none;
+}
+.sug-list.open{display:block;}
+.sug-item{
+  padding:9px 12px;font-size:13px;cursor:pointer;transition:background .12s;
+  border-bottom:1px solid var(--border);
+}
+.sug-item:last-child{border-bottom:none;}
+.sug-item:hover,.sug-item.focused{background:rgba(0,200,150,.1);color:var(--accent);}
+.sug-empty{padding:10px 12px;font-size:12px;color:var(--muted);}
+
 .modal-btns{display:flex;gap:10px;margin-top:20px;}
 .btn-cancel{
   flex:1;background:var(--surface2);border:1px solid var(--border);
@@ -496,10 +530,38 @@ html,body{
       </select>
     </div>
     <div class="form-group">
-      <label for="selectStation">বর্তমান / সবশেষ স্টেশন</label>
-      <select id="selectStation" aria-required="true">
-        <option value="">— স্টেশন নির্বাচন করুন —</option>
-      </select>
+      <label>বর্তমান / সবশেষ স্টেশন</label>
+
+      <!-- Toggle: Route stops vs Custom -->
+      <div class="station-tabs">
+        <button class="stab active" id="tabRoute" onclick="switchTab('route')">📋 রুটের স্টেশন</button>
+        <button class="stab" id="tabCustom" onclick="switchTab('custom')">✏️ যেকোনো স্টেশন</button>
+      </div>
+
+      <!-- Route dropdown (default) -->
+      <div id="panelRoute">
+        <select id="selectStation" aria-required="true">
+          <option value="">— আগে ট্রেন বেছে নিন —</option>
+        </select>
+      </div>
+
+      <!-- Custom text input with suggestions -->
+      <div id="panelCustom" style="display:none;">
+        <div class="suggestions">
+          <input
+            type="text"
+            id="customStation"
+            placeholder="স্টেশনের নাম লিখুন..."
+            autocomplete="off"
+            oninput="onCustomInput()"
+            onkeydown="onCustomKeyDown(event)"
+          />
+          <div class="sug-list" id="sugList"></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:5px;">
+          💡 যেকোনো স্টেশনের নাম লিখুন — রুটে না থাকলেও চলবে
+        </div>
+      </div>
     </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">বাতিল</button>
@@ -547,16 +609,21 @@ let map, allReports=[], allTrains=[], allStations=[];
 let trainMarkers={}, selectedId=null;
 let isMobile = window.innerWidth <= 768;
 
+// Custom station tab state
+let activeTab = 'route'; // 'route' | 'custom'
+let sugFocusIdx = -1;
+
 // =============================================
 // MAP INIT
 // =============================================
 function initMap() {
   map = L.map('map', {
     center:[23.8,90.2], zoom: isMobile ? 6 : 7,
-    zoomControl:false, tap:true
+    zoomControl:false, tap:true,
+    attributionControl:false   // attribution control সম্পূর্ণ বন্ধ
   });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution:'© OpenStreetMap © CARTO', maxZoom:19
+    maxZoom:19
   }).addTo(map);
   L.control.zoom({position:'topright'}).addTo(map);
 }
@@ -621,14 +688,14 @@ function updateUI() {
 }
 
 function getLatestByTrain() {
-  const map = {};
+  const m = {};
   allReports.forEach(r => {
-    if (!map[r.train_number] ||
-        new Date(r.reported_at) > new Date(map[r.train_number].reported_at)) {
-      map[r.train_number] = r;
+    if (!m[r.train_number] ||
+        new Date(r.reported_at) > new Date(m[r.train_number].reported_at)) {
+      m[r.train_number] = r;
     }
   });
-  return map;
+  return m;
 }
 
 // =============================================
@@ -722,7 +789,6 @@ function showDP(r) {
       <div class="cp-bar"><div class="cp-fill" style="width:60%"></div></div>
     </div>`;
 
-  // Timeline from train route
   const train = allTrains.find(t => t.number === r.train_number);
   const tl = document.getElementById('dpTL');
   tl.innerHTML = '';
@@ -785,7 +851,89 @@ function showList() {
 }
 
 // =============================================
-// MODAL
+// MODAL — STATION TAB SWITCH
+// =============================================
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tabRoute').classList.toggle('active', tab==='route');
+  document.getElementById('tabCustom').classList.toggle('active', tab==='custom');
+  document.getElementById('panelRoute').style.display = tab==='route' ? '' : 'none';
+  document.getElementById('panelCustom').style.display = tab==='custom' ? '' : 'none';
+  if (tab==='custom') {
+    document.getElementById('customStation').focus();
+  }
+}
+
+// =============================================
+// CUSTOM STATION SEARCH / SUGGESTIONS
+// =============================================
+function onCustomInput() {
+  const val = document.getElementById('customStation').value.trim();
+  const list = document.getElementById('sugList');
+  sugFocusIdx = -1;
+
+  if (!val) { list.classList.remove('open'); return; }
+
+  const lower = val.toLowerCase();
+  const matches = allStations.filter(s =>
+    s.name.toLowerCase().includes(lower)
+  ).slice(0, 8);
+
+  if (matches.length === 0) {
+    list.innerHTML = `<div class="sug-empty">কোনো মিল নেই — তবু এই নামেই submit করা যাবে</div>`;
+    list.classList.add('open');
+    return;
+  }
+
+  list.innerHTML = matches.map((s, i) =>
+    `<div class="sug-item" data-name="${s.name}" data-id="${s.id}" onclick="pickSuggestion('${s.name}','${s.id}')">${s.name}</div>`
+  ).join('');
+  list.classList.add('open');
+}
+
+function onCustomKeyDown(e) {
+  const list = document.getElementById('sugList');
+  const items = list.querySelectorAll('.sug-item');
+  if (!list.classList.contains('open') || items.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    sugFocusIdx = Math.min(sugFocusIdx+1, items.length-1);
+    items.forEach((el,i)=>el.classList.toggle('focused',i===sugFocusIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    sugFocusIdx = Math.max(sugFocusIdx-1, 0);
+    items.forEach((el,i)=>el.classList.toggle('focused',i===sugFocusIdx));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (sugFocusIdx >= 0) {
+      const focused = items[sugFocusIdx];
+      pickSuggestion(focused.dataset.name, focused.dataset.id);
+    } else {
+      // Enter দিলে suggestion বন্ধ হয়, যা লেখা আছে সেটাই থাকে
+      list.classList.remove('open');
+    }
+  } else if (e.key === 'Escape') {
+    list.classList.remove('open');
+  }
+}
+
+function pickSuggestion(name, id) {
+  document.getElementById('customStation').value = name;
+  document.getElementById('customStation').dataset.selectedId = id;
+  document.getElementById('sugList').classList.remove('open');
+}
+
+// Suggestions বন্ধ হবে outside click-এ
+document.addEventListener('click', e => {
+  const sugArea = document.getElementById('panelCustom');
+  if (!sugArea.contains(e.target)) {
+    document.getElementById('sugList').classList.remove('open');
+  }
+});
+
+// =============================================
+// MODAL POPULATE
 // =============================================
 function populateModal() {
   const tSel = document.getElementById('selectTrain');
@@ -813,9 +961,12 @@ function populateModal() {
       opt.textContent = st.name;
       sSel.appendChild(opt);
     });
+    // Custom tab-এ train change হলে suggestions reset
+    document.getElementById('customStation').value = '';
+    document.getElementById('customStation').dataset.selectedId = '';
+    document.getElementById('sugList').classList.remove('open');
   };
 
-  // Populate all stations as fallback
   const sSel = document.getElementById('selectStation');
   sSel.innerHTML = '<option value="">— আগে ট্রেন বেছে নিন —</option>';
 }
@@ -823,6 +974,8 @@ function populateModal() {
 function openModal() {
   document.getElementById('modalBg').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // Reset to route tab on open
+  switchTab('route');
 }
 
 function closeModal() {
@@ -830,12 +983,42 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
+// =============================================
+// SUBMIT REPORT
+// =============================================
 async function submitReport() {
   const trainNum = document.getElementById('selectTrain').value;
-  const stationId = document.getElementById('selectStation').value;
-  if (!trainNum || !stationId) {
-    showToast('⚠️ ট্রেন এবং স্টেশন দুটোই বেছে নিন');
-    return;
+  if (!trainNum) { showToast('⚠️ ট্রেন বেছে নিন'); return; }
+
+  let stationId = null, stationName = null, lat = null, lon = null;
+
+  if (activeTab === 'route') {
+    stationId = document.getElementById('selectStation').value;
+    if (!stationId) { showToast('⚠️ স্টেশন বেছে নিন'); return; }
+    const st = allStations.find(s => s.id === stationId);
+    stationName = st ? st.name : stationId;
+    lat = st ? st.lat : 23.7;
+    lon = st ? st.lon : 90.4;
+
+  } else {
+    // Custom tab
+    const input = document.getElementById('customStation');
+    stationName = input.value.trim();
+    if (!stationName) { showToast('⚠️ স্টেশনের নাম লিখুন'); return; }
+
+    // যদি suggestion থেকে pick করা হয়ে থাকে সেটার id ও coords নাও
+    const pickedId = input.dataset.selectedId;
+    if (pickedId) {
+      const st = allStations.find(s => s.id === pickedId);
+      if (st) { stationId = pickedId; lat = st.lat; lon = st.lon; }
+    }
+    // যদি suggestion-এ না থাকে তাহলে name দিয়ে চেষ্টা করো
+    if (!stationId) {
+      const st = allStations.find(s => s.name.toLowerCase() === stationName.toLowerCase());
+      if (st) { stationId = st.id; lat = st.lat; lon = st.lon; }
+    }
+    // কোনোভাবেই না পেলে default coords
+    if (!lat) { lat = 23.7; lon = 90.4; }
   }
 
   const btn = document.getElementById('submitBtn');
@@ -843,15 +1026,13 @@ async function submitReport() {
   btn.textContent = 'পাঠানো হচ্ছে...';
 
   const train = allTrains.find(t => t.number === trainNum);
-  const station = allStations.find(s => s.id === stationId);
 
   const ok = await supa.post('train_reports', {
     train_number: trainNum,
     train_name: train ? train.name.split('(')[0].trim() : trainNum,
-    station_id: stationId,
-    station_name: station ? station.name : stationId,
-    lat: station ? station.lat : 23.7,
-    lon: station ? station.lon : 90.4,
+    station_id: stationId || stationName,
+    station_name: stationName,
+    lat, lon,
   });
 
   btn.disabled = false;
@@ -873,12 +1054,10 @@ function showToast(msg, duration=4000) {
   setTimeout(()=>t.classList.remove('show'), duration);
 }
 
-// Close modal on background tap
 document.getElementById('modalBg').onclick = e => {
   if (e.target === document.getElementById('modalBg')) closeModal();
 };
 
-// Handle resize
 window.addEventListener('resize', () => {
   isMobile = window.innerWidth <= 768;
 });
