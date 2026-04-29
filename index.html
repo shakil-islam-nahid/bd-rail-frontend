@@ -318,19 +318,23 @@ html,body{
   margin-top:4px;
 }
 .sug-list{
-  position:absolute;top:0;left:0;right:0;
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
   background:var(--surface2);border:1px solid var(--accent);
-  border-radius:10px;z-index:100;max-height:180px;overflow-y:auto;
+  border-radius:10px;z-index:100;max-height:200px;overflow-y:auto;
   display:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
 }
 .sug-list.open{display:block;}
 .sug-item{
-  padding:9px 12px;font-size:13px;cursor:pointer;transition:background .12s;
-  border-bottom:1px solid var(--border);
+  padding:10px 12px;font-size:13px;cursor:pointer;transition:background .12s;
+  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;
 }
 .sug-item:last-child{border-bottom:none;}
 .sug-item:hover,.sug-item.focused{background:rgba(0,200,150,.1);color:var(--accent);}
-.sug-empty{padding:10px 12px;font-size:12px;color:var(--muted);}
+.sug-item .sug-icon{font-size:11px;opacity:.6;flex-shrink:0;}
+.sug-highlight{color:var(--accent);font-weight:600;}
+.sug-list::-webkit-scrollbar{width:3px;}
+.sug-list::-webkit-scrollbar-thumb{background:var(--border);}
 
 .modal-btns{display:flex;gap:10px;margin-top:20px;}
 .btn-cancel{
@@ -553,13 +557,11 @@ html,body{
             id="customStation"
             placeholder="স্টেশনের নাম লিখুন..."
             autocomplete="off"
+            onfocus="onCustomFocus()"
             oninput="onCustomInput()"
             onkeydown="onCustomKeyDown(event)"
           />
           <div class="sug-list" id="sugList"></div>
-        </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:5px;">
-          💡 যেকোনো স্টেশনের নাম লিখুন — রুটে না থাকলেও চলবে
         </div>
       </div>
     </div>
@@ -867,28 +869,59 @@ function switchTab(tab) {
 // =============================================
 // CUSTOM STATION SEARCH / SUGGESTIONS
 // =============================================
+function renderSuggestions(matches, query) {
+  const list = document.getElementById('sugList');
+  if (matches.length === 0) {
+    list.classList.remove('open');
+    return;
+  }
+  const q = query.toLowerCase();
+  list.innerHTML = matches.map(s => {
+    // highlight matching part
+    const idx = s.name.toLowerCase().indexOf(q);
+    let label = s.name;
+    if (q && idx !== -1) {
+      label = s.name.slice(0, idx)
+        + `<span class="sug-highlight">${s.name.slice(idx, idx+q.length)}</span>`
+        + s.name.slice(idx+q.length);
+    }
+    return `<div class="sug-item" data-name="${s.name}" data-id="${s.id}" onmousedown="pickSuggestion('${s.name}','${s.id}')">`
+      + `<span class="sug-icon">🚉</span><span>${label}</span></div>`;
+  }).join('');
+  list.classList.add('open');
+  sugFocusIdx = -1;
+}
+
+function onCustomFocus() {
+  const val = document.getElementById('customStation').value.trim();
+  if (!val && allStations.length > 0) {
+    // খালি থাকলে সব station দেখাও (প্রথম ২০টা)
+    renderSuggestions(allStations.slice(0, 20), '');
+  } else if (val) {
+    onCustomInput();
+  }
+}
+
 function onCustomInput() {
   const val = document.getElementById('customStation').value.trim();
-  const list = document.getElementById('sugList');
+  // selected id clear হবে যদি user নতুন কিছু type করে
+  document.getElementById('customStation').dataset.selectedId = '';
   sugFocusIdx = -1;
 
-  if (!val) { list.classList.remove('open'); return; }
-
-  const lower = val.toLowerCase();
-  const matches = allStations.filter(s =>
-    s.name.toLowerCase().includes(lower)
-  ).slice(0, 8);
-
-  if (matches.length === 0) {
-    list.innerHTML = `<div class="sug-empty">কোনো মিল নেই — তবু এই নামেই submit করা যাবে</div>`;
-    list.classList.add('open');
+  if (!val) {
+    // খালি করলে সব station দেখাও
+    renderSuggestions(allStations.slice(0, 20), '');
     return;
   }
 
-  list.innerHTML = matches.map((s, i) =>
-    `<div class="sug-item" data-name="${s.name}" data-id="${s.id}" onclick="pickSuggestion('${s.name}','${s.id}')">${s.name}</div>`
-  ).join('');
-  list.classList.add('open');
+  const lower = val.toLowerCase();
+  // প্রথমে starts-with match, তারপর includes
+  const starts = allStations.filter(s => s.name.toLowerCase().startsWith(lower));
+  const includes = allStations.filter(s =>
+    !s.name.toLowerCase().startsWith(lower) && s.name.toLowerCase().includes(lower)
+  );
+  const matches = [...starts, ...includes].slice(0, 10);
+  renderSuggestions(matches, val);
 }
 
 function onCustomKeyDown(e) {
@@ -899,18 +932,19 @@ function onCustomKeyDown(e) {
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     sugFocusIdx = Math.min(sugFocusIdx+1, items.length-1);
-    items.forEach((el,i)=>el.classList.toggle('focused',i===sugFocusIdx));
+    items.forEach((el,i) => el.classList.toggle('focused', i===sugFocusIdx));
+    items[sugFocusIdx]?.scrollIntoView({block:'nearest'});
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     sugFocusIdx = Math.max(sugFocusIdx-1, 0);
-    items.forEach((el,i)=>el.classList.toggle('focused',i===sugFocusIdx));
+    items.forEach((el,i) => el.classList.toggle('focused', i===sugFocusIdx));
+    items[sugFocusIdx]?.scrollIntoView({block:'nearest'});
   } else if (e.key === 'Enter') {
     e.preventDefault();
     if (sugFocusIdx >= 0) {
       const focused = items[sugFocusIdx];
       pickSuggestion(focused.dataset.name, focused.dataset.id);
     } else {
-      // Enter দিলে suggestion বন্ধ হয়, যা লেখা আছে সেটাই থাকে
       list.classList.remove('open');
     }
   } else if (e.key === 'Escape') {
@@ -919,15 +953,16 @@ function onCustomKeyDown(e) {
 }
 
 function pickSuggestion(name, id) {
-  document.getElementById('customStation').value = name;
-  document.getElementById('customStation').dataset.selectedId = id;
+  const input = document.getElementById('customStation');
+  input.value = name;
+  input.dataset.selectedId = id;
   document.getElementById('sugList').classList.remove('open');
 }
 
-// Suggestions বন্ধ হবে outside click-এ
+// Outside click হলে suggestions বন্ধ
 document.addEventListener('click', e => {
   const sugArea = document.getElementById('panelCustom');
-  if (!sugArea.contains(e.target)) {
+  if (sugArea && !sugArea.contains(e.target)) {
     document.getElementById('sugList').classList.remove('open');
   }
 });
