@@ -2,11 +2,47 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BD Rail Track | বাংলাদেশ রেলওয়ে ট্র্যাকার</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- SEO Meta Tags -->
+<title>BD Rail Track | বাংলাদেশ রেলওয়ে ট্র্যাকার - লাইভ ট্রেন অবস্থান</title>
+<meta name="description" content="বাংলাদেশ রেলওয়ের সকল ট্রেনের লাইভ অবস্থান দেখুন। যাত্রীরা নিজেরাই ট্রেনের অবস্থান জানাতে পারেন। Bangladesh Railway live train tracker.">
+<meta name="keywords" content="বাংলাদেশ রেলওয়ে, ট্রেন ট্র্যাকার, লাইভ ট্রেন, Bangladesh Railway, train tracker, live train location, BR train schedule">
+<meta name="author" content="BD Rail Track">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://bd-rail-frontend.vercel.app/">
+
+<!-- Open Graph (Facebook, WhatsApp preview) -->
+<meta property="og:title" content="BD Rail Track - বাংলাদেশ রেলওয়ে লাইভ ট্র্যাকার">
+<meta property="og:description" content="যাত্রীরা নিজেরাই ট্রেনের অবস্থান জানান। সবাই মিলে বানাই বাংলাদেশের প্রথম রেলওয়ে ট্র্যাকার।">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bd-rail-frontend.vercel.app/">
+<meta property="og:locale" content="bn_BD">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BD Rail Track - Bangladesh Railway Live Tracker">
+<meta name="twitter:description" content="Live crowdsourced train tracking for Bangladesh Railway">
+
+<!-- Structured Data for Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "BD Rail Track",
+  "description": "বাংলাদেশ রেলওয়ে লাইভ ট্র্যাকার",
+  "url": "https://bd-rail-frontend.vercel.app/",
+  "applicationCategory": "TravelApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "bn",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "BDT"}
+}
+</script>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -14,158 +50,457 @@
   --border:#1e2d45;--accent:#00c896;--accent2:#ff6b35;
   --text:#e8edf5;--muted:#5a7090;
   --green:#00c896;--yellow:#ffd166;--red:#ef476f;
+  --header-h:56px;--bottom-h:64px;
 }
-html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
 
-/* HEADER */
-.header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;height:56px;z-index:1000;position:relative;}
-.logo{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#00a87a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;}
-.logo-title{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;}
-.logo-sub{font-size:10px;color:var(--muted);}
-.hstats{display:flex;gap:12px;margin-left:auto;flex-shrink:0;}
-.hstat{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
-.hdot{width:7px;height:7px;border-radius:50%;animation:blink 2s infinite;}
+html,body{
+  height:100%;
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+}
+
+/* ===================== HEADER ===================== */
+.header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  height:var(--header-h);
+  position:fixed;
+  top:0;left:0;right:0;
+  z-index:1000;
+}
+.logo{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),#00a87a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.logo-title{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;line-height:1;}
+.logo-sub{font-size:9px;color:var(--muted);line-height:1;margin-top:2px;}
+.header-mid{flex:1;display:flex;align-items:center;gap:8px;}
+.hstats{display:flex;gap:10px;flex-shrink:0;}
+.hstat{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.hdot{width:6px;height:6px;border-radius:50%;animation:blink 2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.report-btn{
+  background:var(--accent2);color:#fff;border:none;border-radius:8px;
+  padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;
+  font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;
+  transition:all .2s;
+}
+.report-btn:hover{background:#e55a25;transform:scale(1.02);}
+.report-btn:active{transform:scale(.98);}
 
-/* REPORT BUTTON */
-.report-btn{background:var(--accent);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;flex-shrink:0;}
-.report-btn:hover{background:#00a87a;transform:scale(1.03);}
+/* ===================== MAIN LAYOUT ===================== */
+.main{
+  display:flex;
+  height:100vh;
+  padding-top:var(--header-h);
+}
 
-/* MAIN */
-.main{display:flex;height:calc(100vh - 56px);}
-
-/* SIDEBAR */
-.sidebar{width:265px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.sbh{padding:11px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;letter-spacing:1px;color:var(--muted);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;}
+/* ===================== SIDEBAR (desktop) ===================== */
+.sidebar{
+  width:270px;
+  flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  transition:transform .3s ease;
+}
+.sbh{
+  padding:10px 14px;
+  border-bottom:1px solid var(--border);
+  font-size:10px;font-weight:600;letter-spacing:1px;
+  color:var(--muted);text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
 .sbcount{font-size:11px;color:var(--accent);font-family:'Space Mono',monospace;background:rgba(0,200,150,.1);padding:1px 7px;border-radius:10px;}
-.tlist{flex:1;overflow-y:auto;padding:7px;}
+.tlist{flex:1;overflow-y:auto;padding:6px;}
 .tlist::-webkit-scrollbar{width:3px;}
 .tlist::-webkit-scrollbar-thumb{background:var(--border);}
-.empty-state{padding:24px 16px;text-align:center;color:var(--muted);font-size:12px;line-height:1.7;}
-.empty-state .ei{font-size:32px;margin-bottom:10px;}
 
-.tcard{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 11px;margin-bottom:6px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden;}
-.tcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--accent);}
-.tcard.reported::before{background:var(--accent2);}
-.tcard:hover,.tcard.active{border-color:var(--accent);background:rgba(0,200,150,.05);}
-.tc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;}
-.tc-name{font-size:12px;font-weight:600;}
-.tc-num{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
-.tc-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:500;}
-.tc-badge.live{background:rgba(255,107,53,.2);color:var(--accent2);}
-.tc-badge.estimated{background:rgba(0,200,150,.15);color:var(--green);}
-.tc-station{font-size:11px;color:var(--text);margin-bottom:3px;}
-.tc-station b{color:var(--accent);}
-.tc-time{font-size:9px;color:var(--muted);}
-.tc-rep{font-size:9px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px;}
-.rep-dot{width:5px;height:5px;border-radius:50%;background:var(--accent2);}
+.empty-state{padding:32px 16px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8;}
+.empty-icon{font-size:36px;margin-bottom:12px;}
 
-/* MAP */
-.map-wrap{flex:1;position:relative;}
+/* Train Cards */
+.tcard{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 11px;margin-bottom:6px;
+  cursor:pointer;transition:all .18s;position:relative;overflow:hidden;
+}
+.tcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
+.tcard.running::before{background:var(--accent2);}
+.tcard.delayed::before{background:var(--yellow);}
+.tcard:hover,.tcard.active{border-color:var(--accent);background:rgba(0,200,150,.06);}
+.tc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;gap:8px;}
+.tc-name{font-size:12px;font-weight:600;line-height:1.3;flex:1;}
+.tc-num{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);}
+.tc-badge{font-size:9px;padding:2px 6px;border-radius:8px;font-weight:500;flex-shrink:0;}
+.tc-badge.running{background:rgba(255,107,53,.2);color:var(--accent2);}
+.tc-badge.delayed{background:rgba(255,209,102,.15);color:var(--yellow);}
+.tc-route{font-size:10px;color:var(--muted);margin-bottom:5px;}
+.tc-route b{color:var(--text);}
+.tc-loc{font-size:9px;color:var(--muted);}
+.tc-loc span{color:var(--accent2);}
+.tc-ago{font-size:9px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px;}
+.rep-dot{width:5px;height:5px;border-radius:50%;background:var(--accent2);flex-shrink:0;}
+
+/* ===================== MAP ===================== */
+.map-wrap{flex:1;position:relative;overflow:hidden;}
 #map{width:100%;height:100%;}
-.leaflet-tooltip{background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:8px!important;color:var(--text)!important;font-family:'DM Sans',sans-serif!important;font-size:12px!important;box-shadow:0 4px 16px rgba(0,0,0,.4)!important;padding:8px 12px!important;}
+
+.leaflet-tooltip{
+  background:var(--surface)!important;border:1px solid var(--border)!important;
+  border-radius:8px!important;color:var(--text)!important;
+  font-family:'DM Sans',sans-serif!important;font-size:12px!important;
+  box-shadow:0 4px 16px rgba(0,0,0,.4)!important;padding:8px 12px!important;
+}
 .leaflet-tooltip::before{display:none!important;}
 .tt-name{font-weight:600;margin-bottom:2px;}
 .tt-info{color:#5a7090;font-size:11px;}
 .tt-rep{font-size:10px;color:var(--accent2);margin-top:3px;}
 
-.map-tl{position:absolute;top:10px;left:10px;z-index:999;display:flex;flex-direction:column;gap:5px;}
-.live-pill{background:rgba(239,71,111,.18);border:1px solid rgba(239,71,111,.4);border-radius:20px;padding:4px 11px;font-size:10px;color:#ef476f;display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace;}
+/* Map overlays */
+.map-tl{position:absolute;top:10px;left:10px;z-index:800;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
+.live-pill{background:rgba(239,71,111,.18);border:1px solid rgba(239,71,111,.4);border-radius:20px;padding:4px 11px;font-size:10px;color:#ef476f;display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;}
 .live-dot{width:6px;height:6px;background:#ef476f;border-radius:50%;animation:blink 1.2s infinite;}
-.crowd-pill{background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.3);border-radius:20px;padding:3px 10px;font-size:9px;color:var(--accent2);}
+.crowd-pill{background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:9px;color:var(--muted);}
 
-/* REPORT MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+/* ===================== DETAIL PANEL ===================== */
+.dp{
+  position:fixed;bottom:0;left:0;right:0;
+  z-index:900;
+  background:var(--surface);
+  border-top:2px solid var(--accent);
+  border-radius:16px 16px 0 0;
+  padding:16px 16px 24px;
+  display:none;
+  animation:slideUp .25s ease;
+  max-height:55vh;
+  overflow-y:auto;
+}
+.dp.open{display:block;}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.dp-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
+.dp-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:12px;}
+.dp-title{font-size:15px;font-weight:600;line-height:1.3;}
+.dp-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.dp-tags{display:flex;gap:7px;margin-top:6px;flex-wrap:wrap;}
+.dp-tag{font-size:10px;padding:2px 9px;border-radius:10px;}
+.dp-tag.running{background:rgba(255,107,53,.2);color:var(--accent2);}
+.dp-tag.delayed{background:rgba(255,209,102,.15);color:var(--yellow);}
+.dp-tag.info{background:rgba(30,45,69,.7);color:var(--muted);}
+.dp-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;flex-shrink:0;padding:4px;}
+
+/* Current Position Box */
+.cur-pos{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;margin-bottom:12px;
+  display:flex;align-items:center;gap:12px;
+}
+.cp-train{font-size:28px;flex-shrink:0;}
+.cp-info{flex:1;min-width:0;}
+.cp-seg{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-seg span{color:var(--accent2);}
+.cp-next{font-size:11px;color:var(--muted);margin-top:2px;}
+.cp-bar{margin-top:6px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.cp-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;}
+
+/* Timeline */
+.tl-wrap{overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;}
+.tl-wrap::-webkit-scrollbar{height:2px;}
+.tl-wrap::-webkit-scrollbar-thumb{background:var(--border);}
+.tl{display:flex;align-items:flex-start;min-width:max-content;}
+.tstop{display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:70px;}
+.ts-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--muted);background:var(--bg);z-index:2;}
+.ts-dot.done{border-color:var(--accent);background:var(--accent);}
+.ts-dot.here{border-color:var(--accent2);background:var(--accent2);box-shadow:0 0 10px var(--accent2);animation:glow 1.5s infinite;}
+@keyframes glow{0%,100%{box-shadow:0 0 6px var(--accent2)}50%{box-shadow:0 0 16px var(--accent2)}}
+.ts-name{font-size:9px;color:var(--muted);margin-top:4px;text-align:center;max-width:68px;line-height:1.3;}
+.ts-name.done{color:var(--accent);}
+.ts-name.here{color:var(--accent2);font-weight:600;}
+.ts-time{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px;}
+.tconn{flex:1;min-width:12px;height:2px;background:var(--border);margin-top:4px;}
+.tconn.done{background:var(--accent);}
+
+/* ===================== MOBILE BOTTOM NAV ===================== */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  height:var(--bottom-h);
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  z-index:950;
+  padding:0 8px;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.bnav-items{display:flex;height:100%;align-items:center;justify-content:space-around;}
+.bnav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;padding:8px 16px;border-radius:10px;
+  font-size:10px;color:var(--muted);transition:all .2s;
+  border:none;background:none;font-family:'DM Sans',sans-serif;
+  flex:1;
+}
+.bnav-item.active{color:var(--accent2);}
+.bnav-item .bi{font-size:20px;}
+.bnav-report{
+  background:var(--accent2);color:#fff!important;
+  border-radius:12px!important;
+  margin:0 4px;
+}
+
+/* ===================== MOBILE TRAIN LIST DRAWER ===================== */
+.mobile-drawer{
+  display:none;
+  position:fixed;
+  top:var(--header-h);bottom:0;left:0;right:0;
+  background:var(--surface);
+  z-index:800;
+  flex-direction:column;
+  overflow:hidden;
+  transform:translateX(-100%);
+  transition:transform .3s ease;
+}
+.mobile-drawer.open{transform:translateX(0);}
+
+/* ===================== MODAL ===================== */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:2000;display:none;
+  align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
 .modal-bg.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:420px;animation:popIn .25s ease;}
-@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
-.modal h2{font-size:16px;font-weight:600;margin-bottom:4px;}
-.modal p{font-size:11px;color:var(--muted);margin-bottom:20px;}
+.modal{
+  background:var(--surface);
+  border-radius:20px 20px 0 0;
+  padding:20px 20px 32px;
+  width:100%;max-width:480px;
+  animation:slideUp .3s ease;
+  max-height:90vh;overflow-y:auto;
+}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+.modal h2{font-size:17px;font-weight:600;margin-bottom:4px;}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6;}
 .form-group{margin-bottom:14px;}
 .form-group label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:500;}
-.form-group select,.form-group input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;appearance:none;}
-.form-group select:focus,.form-group input:focus{border-color:var(--accent);}
+.form-group select{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:11px 12px;color:var(--text);
+  font-size:14px;font-family:'DM Sans',sans-serif;outline:none;
+  transition:border-color .2s;-webkit-appearance:none;
+}
+.form-group select:focus{border-color:var(--accent);}
 .form-group select option{background:var(--surface2);}
 .modal-btns{display:flex;gap:10px;margin-top:20px;}
-.btn-cancel{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--muted);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
-.btn-submit{flex:2;background:var(--accent);border:none;border-radius:8px;padding:10px;color:#000;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;}
-.btn-submit:hover{background:#00a87a;}
+.btn-cancel{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px;color:var(--muted);
+  font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;
+}
+.btn-submit{
+  flex:2;background:var(--accent2);border:none;border-radius:10px;
+  padding:12px;color:#fff;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;
+}
+.btn-submit:hover{background:#e55a25;}
 .btn-submit:disabled{background:var(--muted);cursor:not-allowed;}
 
-/* SUCCESS TOAST */
-.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px 18px;font-size:13px;z-index:3000;display:none;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4);}
-.toast.show{display:flex;align-items:center;gap:10px;}
-@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* Toast */
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--accent);
+  border-radius:12px;padding:12px 18px;font-size:13px;
+  z-index:3000;display:none;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+.toast.show{display:flex;align-items:center;gap:10px;animation:slideUp .3s ease;}
 
-/* LOADING */
-.loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+/* Loading */
+.loading{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;
+}
 .loading .li{font-size:52px;animation:tm .9s infinite alternate;margin-bottom:14px;}
 @keyframes tm{from{transform:translateX(-12px)}to{transform:translateX(12px)}}
 .loading p{color:var(--muted);font-size:13px;font-family:'Space Mono',monospace;}
+
+/* ===================== RESPONSIVE BREAKPOINTS ===================== */
+@media (max-width: 768px) {
+  :root{--header-h:52px;}
+
+  .hstats{display:none;}
+  .logo-sub{display:none;}
+
+  /* Hide desktop sidebar */
+  .sidebar{display:none;}
+
+  /* Show mobile elements */
+  .bottom-nav{display:block;}
+  .mobile-drawer{display:flex;}
+
+  /* Map takes full height minus header + bottom nav */
+  .main{padding-bottom:var(--bottom-h);}
+  .map-wrap{height:calc(100vh - var(--header-h) - var(--bottom-h));}
+
+  /* Detail panel higher on mobile */
+  .dp{max-height:70vh;padding-bottom:calc(var(--bottom-h) + 16px);}
+
+  /* Toast above bottom nav */
+  .toast{bottom:calc(var(--bottom-h) + 12px);}
+
+  /* Map overlays smaller */
+  .map-tl{top:8px;left:8px;}
+  .live-pill{font-size:9px;padding:3px 8px;}
+  .crowd-pill{display:none;}
+
+  /* Modal full bottom sheet */
+  .modal{border-radius:20px 20px 0 0;padding-bottom:calc(env(safe-area-inset-bottom) + 24px);}
+
+  .report-btn{padding:6px 10px;font-size:11px;}
+  .logo-title{font-size:10px;}
+}
+
+@media (max-width: 380px) {
+  .report-btn{display:none;}
+  .logo-title{letter-spacing:0;}
+}
+
+@media (min-width: 769px) {
+  .bottom-nav{display:none;}
+  .mobile-drawer{display:none;}
+  .sidebar{display:flex;}
+  .main{padding-bottom:0;}
+}
 </style>
 </head>
 <body>
 
 <div class="loading" id="loading">
   <div class="li">🚆</div>
-  <p>ট্র্যাকার লোড হচ্ছে...</p>
+  <p>BD Rail Track লোড হচ্ছে...</p>
 </div>
 
 <!-- HEADER -->
-<div class="header">
-  <div class="logo">
-    <div class="logo-icon">🚆</div>
-    <div><div class="logo-title">BD RAIL TRACK</div><div class="logo-sub">যাত্রী-চালিত রেলওয়ে ট্র্যাকার</div></div>
+<header class="header">
+  <a class="logo" href="/" aria-label="BD Rail Track Home">
+    <div class="logo-icon" aria-hidden="true">🚆</div>
+    <div>
+      <div class="logo-title">BD RAIL TRACK</div>
+      <div class="logo-sub">বাংলাদেশ রেলওয়ে ট্র্যাকার</div>
+    </div>
+  </a>
+  <div class="header-mid">
+    <div class="hstats">
+      <div class="hstat"><div class="hdot" style="background:var(--accent2)"></div><span id="cntLive">0</span> Live</div>
+      <div class="hstat"><div class="hdot" style="background:var(--green)"></div><span id="cntTotal">0</span> Train</div>
+    </div>
   </div>
-  <div class="hstats">
-    <div class="hstat"><div class="hdot" style="background:var(--accent2)"></div><span id="cntLive">0</span> Live Report</div>
-    <div class="hstat"><div class="hdot" style="background:var(--green)"></div><span id="cntTotal">0</span> Train</div>
-  </div>
-  <button class="report-btn" onclick="openModal()">📍 আমার অবস্থান জানাই</button>
-</div>
+  <button class="report-btn" onclick="openModal()" aria-label="আমার অবস্থান জানাই">
+    📍 অবস্থান জানাই
+  </button>
+</header>
 
 <!-- MAIN -->
 <div class="main">
-  <div class="sidebar">
-    <div class="sbh">ট্র্যাক হচ্ছে <span class="sbcount" id="sbCount">0</span></div>
+  <!-- Desktop Sidebar -->
+  <aside class="sidebar" aria-label="Train List">
+    <div class="sbh">
+      এখন চলছে
+      <span class="sbcount" id="sbCount">0</span>
+    </div>
     <div class="tlist" id="tlist">
       <div class="empty-state">
-        <div class="ei">🚆</div>
-        <div>এখনো কোনো report নেই</div>
-        <div style="margin-top:6px;font-size:11px">ট্রেনে থাকলে <b style="color:var(--accent2)">"আমার অবস্থান জানাই"</b> বাটন চাপো</div>
+        <div class="empty-icon">🚆</div>
+        <div>এখনো কোনো live report নেই</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--accent2)">ট্রেনে থাকলে অবস্থান জানান!</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Mobile Drawer -->
+  <div class="mobile-drawer" id="mobileDrawer" aria-label="Mobile train list">
+    <div class="sbh">
+      এখন চলছে
+      <span class="sbcount" id="sbCountMobile">0</span>
+    </div>
+    <div class="tlist" id="tlistMobile">
+      <div class="empty-state">
+        <div class="empty-icon">🚆</div>
+        <div>এখনো কোনো live report নেই</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--accent2)">ট্রেনে থাকলে অবস্থান জানান!</div>
       </div>
     </div>
   </div>
-  <div class="map-wrap">
-    <div id="map"></div>
-    <div class="map-tl">
+
+  <!-- Map -->
+  <main class="map-wrap">
+    <div id="map" aria-label="Bangladesh Railway Map"></div>
+    <div class="map-tl" aria-hidden="true">
       <div class="live-pill"><div class="live-dot"></div>CROWDSOURCED LIVE</div>
       <div class="crowd-pill">👥 যাত্রীরা নিজেরা report করছেন</div>
     </div>
-  </div>
+  </main>
 </div>
 
-<!-- REPORT MODAL -->
-<div class="modal-bg" id="modalBg">
+<!-- Detail Panel -->
+<div class="dp" id="dp" role="dialog" aria-label="Train detail">
+  <div class="dp-handle"></div>
+  <div class="dp-hd">
+    <div>
+      <div class="dp-title" id="dpName"></div>
+      <div class="dp-sub" id="dpSub"></div>
+      <div class="dp-tags" id="dpTags"></div>
+    </div>
+    <button class="dp-close" onclick="closeDP()" aria-label="Close">✕</button>
+  </div>
+  <div class="cur-pos" id="curPos"></div>
+  <div class="tl-wrap"><div class="tl" id="dpTL"></div></div>
+</div>
+
+<!-- Bottom Navigation (Mobile) -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <div class="bnav-items">
+    <button class="bnav-item active" id="btnMap" onclick="showMap()" aria-label="Map">
+      <span class="bi">🗺️</span>
+      <span>ম্যাপ</span>
+    </button>
+    <button class="bnav-item bnav-report" onclick="openModal()" aria-label="Report location">
+      <span class="bi">📍</span>
+      <span>জানাই</span>
+    </button>
+    <button class="bnav-item" id="btnList" onclick="showList()" aria-label="Train list">
+      <span class="bi">🚆</span>
+      <span>ট্রেন</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Report Modal -->
+<div class="modal-bg" id="modalBg" role="dialog" aria-modal="true" aria-label="Report location">
   <div class="modal">
+    <div class="modal-handle"></div>
     <h2>📍 আপনার অবস্থান জানান</h2>
-    <p>আপনি এখন কোন ট্রেনে আছেন এবং কোন স্টেশনে আছেন বা পার হয়েছেন সেটা জানান।</p>
-
+    <p>আপনি এখন কোন ট্রেনে আছেন এবং কোন স্টেশনে আছেন বা সবশেষ পার হয়েছেন জানান। সবার উপকার হবে।</p>
     <div class="form-group">
-      <label>ট্রেন নির্বাচন করুন</label>
-      <select id="selectTrain">
-        <option value="">— ট্রেন বেছে নিন —</option>
+      <label for="selectTrain">ট্রেন বেছে নিন</label>
+      <select id="selectTrain" aria-required="true">
+        <option value="">— ট্রেন নির্বাচন করুন —</option>
       </select>
     </div>
-
     <div class="form-group">
-      <label>বর্তমান / সবশেষ স্টেশন</label>
-      <select id="selectStation">
-        <option value="">— স্টেশন বেছে নিন —</option>
+      <label for="selectStation">বর্তমান / সবশেষ স্টেশন</label>
+      <select id="selectStation" aria-required="true">
+        <option value="">— স্টেশন নির্বাচন করুন —</option>
       </select>
     </div>
-
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">বাতিল</button>
       <button class="btn-submit" id="submitBtn" onclick="submitReport()">✅ Report করুন</button>
@@ -173,320 +508,331 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
   </div>
 </div>
 
-<!-- TOAST -->
-<div class="toast" id="toast">
-  <span>✅</span>
-  <span id="toastMsg">Report সফল হয়েছে! ধন্যবাদ।</span>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="polite">
+  <span id="toastMsg"></span>
 </div>
 
 <script>
 // =============================================
-// SUPABASE CONFIG
+// CONFIG
 // =============================================
 const SUPABASE_URL = 'https://tovdrzougxuwasndhurp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_vi7X7473LeMXcSXz10noZA_aFysfSbE';
 
 const supa = {
-  async select(table, query='') {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-      }
+  async get(table, query='') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+      headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`}
     });
-    return res.json();
+    return r.json();
   },
-  async insert(table, data) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+  async post(table, data) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method:'POST',
+      headers:{
+        'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,
+        'Content-Type':'application/json','Prefer':'return=minimal'
       },
-      body: JSON.stringify(data)
+      body:JSON.stringify(data)
     });
-    return res.ok;
+    return r.ok;
   }
 };
 
 // =============================================
-// STATIONS
-// =============================================
-const ST = {
-  'Dhaka':{lat:23.7308,lon:90.4194,name:'ঢাকা'},
-  'Chittagong':{lat:22.3384,lon:91.8317,name:'চট্টগ্রাম'},
-  'Sylhet':{lat:24.8949,lon:91.8687,name:'সিলেট'},
-  'Rajshahi':{lat:24.3745,lon:88.6042,name:'রাজশাহী'},
-  'Khulna':{lat:22.8456,lon:89.5403,name:'খুলনা'},
-  'Mymensingh':{lat:24.7471,lon:90.4203,name:'ময়মনসিংহ'},
-  'Comilla':{lat:23.4607,lon:91.1809,name:'কুমিল্লা'},
-  'Brahmanbaria':{lat:23.9568,lon:91.1117,name:'ব্রাহ্মণবাড়িয়া'},
-  'Akhaura':{lat:23.8786,lon:91.1817,name:'আখাউড়া'},
-  'Joydebpur':{lat:23.9999,lon:90.4017,name:'জয়দেবপুর'},
-  'Ishwardi':{lat:24.1247,lon:89.0640,name:'ঈশ্বরদী'},
-  'Jessore':{lat:23.1667,lon:89.2167,name:'যশোর'},
-  'Bogura':{lat:24.8465,lon:89.3773,name:'বগুড়া'},
-  'Parbatipur':{lat:25.6511,lon:88.9130,name:'পার্বতীপুর'},
-  'Dinajpur':{lat:25.6279,lon:88.6338,name:'দিনাজপুর'},
-  'Feni':{lat:23.0153,lon:91.3960,name:'ফেনী'},
-  'Laksam':{lat:23.2399,lon:91.1280,name:'লাকসাম'},
-  'Tongi':{lat:23.8896,lon:90.3987,name:'টঙ্গী'},
-  'Santahar':{lat:24.7455,lon:89.0472,name:'সান্তাহার'},
-  'Noakhali':{lat:22.8696,lon:91.0996,name:'নোয়াখালী'},
-  'Kishoreganj':{lat:24.4449,lon:90.7766,name:'কিশোরগঞ্জ'},
-  'Jamalpur':{lat:24.9374,lon:89.9374,name:'জামালপুর'},
-  'Lalmonirhat':{lat:25.9217,lon:89.4444,name:'লালমনিরহাট'},
-  'Rangpur':{lat:25.7439,lon:89.2752,name:'রংপুর'},
-  'Bhairab':{lat:24.0524,lon:90.9762,name:'ভৈরব বাজার'},
-  'Habiganj':{lat:24.3740,lon:91.4152,name:'হবিগঞ্জ'},
-  'Moulvibazar':{lat:24.4829,lon:91.7774,name:'মৌলভীবাজার'},
-  'Saidpur':{lat:25.7751,lon:88.8945,name:'সৈয়দপুর'},
-  'Panchagarh':{lat:26.3408,lon:88.5542,name:'পঞ্চগড়'},
-  'Narayanganj':{lat:23.6238,lon:90.4996,name:'নারায়ণগঞ্জ'},
-  'Chandpur':{lat:23.2333,lon:90.6500,name:'চাঁদপুর'},
-  'Tarakandi':{lat:24.7619,lon:89.8544,name:'তারাকান্দি'},
-  'Nilphamari':{lat:25.9318,lon:88.8561,name:'নীলফামারী'},
-  'Chilahati':{lat:25.9862,lon:88.8870,name:'চিলাহাটি'},
-};
-
-// =============================================
-// TRAINS
-// =============================================
-const TRAINS = [
-  {number:'701', name:'সুবর্ণ এক্সপ্রেস (CTG→DHK)', route:['Chittagong','Feni','Laksam','Comilla','Dhaka']},
-  {number:'702', name:'সুবর্ণ এক্সপ্রেস (DHK→CTG)', route:['Dhaka','Comilla','Laksam','Feni','Chittagong']},
-  {number:'703', name:'মহানগর প্রভাতী (CTG→DHK)', route:['Chittagong','Feni','Laksam','Comilla','Brahmanbaria','Dhaka']},
-  {number:'704', name:'মহানগর প্রভাতী (DHK→CTG)', route:['Dhaka','Brahmanbaria','Comilla','Laksam','Feni','Chittagong']},
-  {number:'721', name:'মহানগর গোধূলী (CTG→DHK)', route:['Chittagong','Feni','Laksam','Comilla','Dhaka']},
-  {number:'722', name:'মহানগর গোধূলী (DHK→CTG)', route:['Dhaka','Comilla','Laksam','Feni','Chittagong']},
-  {number:'741', name:'তূর্ণা নিশীথা (CTG→DHK)', route:['Chittagong','Feni','Laksam','Comilla','Dhaka']},
-  {number:'742', name:'তূর্ণা নিশীথা (DHK→CTG)', route:['Dhaka','Comilla','Laksam','Feni','Chittagong']},
-  {number:'787', name:'সোনার বাংলা (DHK→CTG)', route:['Dhaka','Brahmanbaria','Akhaura','Laksam','Feni','Chittagong']},
-  {number:'788', name:'সোনার বাংলা (CTG→DHK)', route:['Chittagong','Feni','Laksam','Akhaura','Brahmanbaria','Dhaka']},
-  {number:'709', name:'পারাবত এক্সপ্রেস (DHK→SYL)', route:['Dhaka','Tongi','Bhairab','Brahmanbaria','Akhaura','Sylhet']},
-  {number:'710', name:'পারাবত এক্সপ্রেস (SYL→DHK)', route:['Sylhet','Akhaura','Brahmanbaria','Bhairab','Tongi','Dhaka']},
-  {number:'717', name:'জয়ন্তিকা এক্সপ্রেস (DHK→SYL)', route:['Dhaka','Tongi','Bhairab','Akhaura','Habiganj','Moulvibazar','Sylhet']},
-  {number:'718', name:'জয়ন্তিকা এক্সপ্রেস (SYL→DHK)', route:['Sylhet','Moulvibazar','Habiganj','Akhaura','Bhairab','Tongi','Dhaka']},
-  {number:'739', name:'উপবন এক্সপ্রেস (DHK→SYL)', route:['Dhaka','Tongi','Bhairab','Akhaura','Sylhet']},
-  {number:'740', name:'উপবন এক্সপ্রেস (SYL→DHK)', route:['Sylhet','Akhaura','Bhairab','Tongi','Dhaka']},
-  {number:'753', name:'সিল্কসিটি (RAJ→DHK)', route:['Rajshahi','Ishwardi','Joydebpur','Dhaka']},
-  {number:'754', name:'সিল্কসিটি (DHK→RAJ)', route:['Dhaka','Joydebpur','Ishwardi','Rajshahi']},
-  {number:'759', name:'পদ্মা এক্সপ্রেস (DHK→RAJ)', route:['Dhaka','Ishwardi','Rajshahi']},
-  {number:'760', name:'পদ্মা এক্সপ্রেস (RAJ→DHK)', route:['Rajshahi','Ishwardi','Dhaka']},
-  {number:'725', name:'সুন্দরবন (KHU→DHK)', route:['Khulna','Jessore','Dhaka']},
-  {number:'726', name:'সুন্দরবন (DHK→KHU)', route:['Dhaka','Jessore','Khulna']},
-  {number:'747', name:'চিত্রা এক্সপ্রেস (DHK→KHU)', route:['Dhaka','Jessore','Khulna']},
-  {number:'748', name:'চিত্রা এক্সপ্রেস (KHU→DHK)', route:['Khulna','Jessore','Dhaka']},
-  {number:'757', name:'দ্রুতযান (DHK→MYM)', route:['Dhaka','Tongi','Joydebpur','Mymensingh']},
-  {number:'758', name:'দ্রুতযান (MYM→DHK)', route:['Mymensingh','Joydebpur','Tongi','Dhaka']},
-  {number:'705', name:'একতা এক্সপ্রেস (DHK→DNJ)', route:['Dhaka','Joydebpur','Santahar','Bogura','Parbatipur','Dinajpur']},
-  {number:'706', name:'একতা এক্সপ্রেস (DNJ→DHK)', route:['Dinajpur','Parbatipur','Bogura','Santahar','Joydebpur','Dhaka']},
-  {number:'771', name:'রংপুর এক্সপ্রেস (DHK→RNG)', route:['Dhaka','Joydebpur','Bogura','Rangpur']},
-  {number:'772', name:'রংপুর এক্সপ্রেস (RNG→DHK)', route:['Rangpur','Bogura','Joydebpur','Dhaka']},
-  {number:'737', name:'এগারসিন্দুর প্রভাতী (DHK→KSG)', route:['Dhaka','Bhairab','Kishoreganj']},
-  {number:'738', name:'এগারসিন্দুর প্রভাতী (KSG→DHK)', route:['Kishoreganj','Bhairab','Dhaka']},
-  {number:'729', name:'পাহাড়িকা (CTG→SYL)', route:['Chittagong','Akhaura','Sylhet']},
-  {number:'730', name:'পাহাড়িকা (SYL→CTG)', route:['Sylhet','Akhaura','Chittagong']},
-  {number:'715', name:'কপোতাক্ষ (KHU→RAJ)', route:['Khulna','Jessore','Ishwardi','Rajshahi']},
-  {number:'716', name:'কপোতাক্ষ (RAJ→KHU)', route:['Rajshahi','Ishwardi','Jessore','Khulna']},
-];
-
-// =============================================
 // STATE
 // =============================================
-let map;
-let trainMarkers = {};
-let currentReports = [];
-let selectedTrainNum = null;
+let map, allReports=[], allTrains=[], allStations=[];
+let trainMarkers={}, selectedId=null;
+let isMobile = window.innerWidth <= 768;
 
 // =============================================
-// MAP
+// MAP INIT
 // =============================================
 function initMap() {
-  map = L.map('map', {center:[23.8,90.2], zoom:7, zoomControl:false});
+  map = L.map('map', {
+    center:[23.8,90.2], zoom: isMobile ? 6 : 7,
+    zoomControl:false, tap:true
+  });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution:'© OpenStreetMap © CARTO', maxZoom:19
   }).addTo(map);
   L.control.zoom({position:'topright'}).addTo(map);
-
-  // Draw all stations as small dots
-  Object.entries(ST).forEach(([id,st]) => {
-    const m = L.circleMarker([st.lat,st.lon], {
-      radius:4, fillColor:'#1a2235', color:'#2a5f8f', weight:2, fillOpacity:1
-    }).addTo(map);
-    m.bindTooltip(`<b>${st.name}</b>`, {permanent:false, direction:'top', offset:[0,-6], opacity:1});
-  });
 }
 
 // =============================================
-// FETCH REPORTS FROM SUPABASE
+// LOAD TRAINS & STATIONS FROM SUPABASE
+// =============================================
+async function loadStaticData() {
+  try {
+    const [trains, stations] = await Promise.all([
+      supa.get('trains','?select=*&order=number'),
+      supa.get('stations','?select=*&order=name')
+    ]);
+    if (Array.isArray(trains)) allTrains = trains;
+    if (Array.isArray(stations)) allStations = stations;
+    populateModal();
+  } catch(e) {
+    console.warn('Static data load failed:', e);
+  }
+}
+
+// =============================================
+// FETCH LIVE REPORTS
 // =============================================
 async function fetchReports() {
   try {
-    // Only get reports from last 45 minutes
     const cutoff = new Date(Date.now() - 45*60*1000).toISOString();
-    const data = await supa.select('train_reports',
-      `?select=*&reported_at=gte.${cutoff}&order=reported_at.desc`
+    const data = await supa.get('train_reports',
+      `?select=*&reported_at=gte.${encodeURIComponent(cutoff)}&order=reported_at.desc`
     );
     if (Array.isArray(data)) {
-      currentReports = data;
+      allReports = data;
       updateUI();
     }
   } catch(e) {
-    console.error('Fetch error:', e);
+    console.warn('Report fetch failed:', e);
   }
   document.getElementById('loading').style.display = 'none';
 }
 
 // =============================================
-// UPDATE UI WITH REPORTS
+// UPDATE ALL UI
 // =============================================
 function updateUI() {
-  // Get latest report per train
-  const latestByTrain = {};
-  currentReports.forEach(r => {
-    if (!latestByTrain[r.train_number] ||
-        new Date(r.reported_at) > new Date(latestByTrain[r.train_number].reported_at)) {
-      latestByTrain[r.train_number] = r;
+  const latest = getLatestByTrain();
+  const list = Object.values(latest);
+
+  document.getElementById('cntLive').textContent = list.length;
+  document.getElementById('cntTotal').textContent = list.length;
+  document.getElementById('sbCount').textContent = list.length;
+  document.getElementById('sbCountMobile').textContent = list.length;
+
+  buildSidebar(list, 'tlist');
+  buildSidebar(list, 'tlistMobile');
+  updateMarkers(list);
+
+  if (selectedId) {
+    const r = latest[selectedId];
+    if (r) showDP(r);
+    else closeDP();
+  }
+}
+
+function getLatestByTrain() {
+  const map = {};
+  allReports.forEach(r => {
+    if (!map[r.train_number] ||
+        new Date(r.reported_at) > new Date(map[r.train_number].reported_at)) {
+      map[r.train_number] = r;
     }
   });
-
-  const trainList = Object.values(latestByTrain);
-  document.getElementById('cntLive').textContent = trainList.length;
-  document.getElementById('cntTotal').textContent = trainList.length;
-  document.getElementById('sbCount').textContent = trainList.length;
-
-  updateSidebar(trainList);
-  updateMapMarkers(trainList);
+  return map;
 }
 
 // =============================================
 // SIDEBAR
 // =============================================
-function updateSidebar(trainList) {
-  const list = document.getElementById('tlist');
-
-  if (trainList.length === 0) {
-    list.innerHTML = `<div class="empty-state">
-      <div class="ei">🚆</div>
-      <div>এখনো কোনো report নেই</div>
-      <div style="margin-top:6px;font-size:11px">ট্রেনে থাকলে <b style="color:var(--accent2)">"আমার অবস্থান জানাই"</b> বাটন চাপো</div>
+function buildSidebar(list, containerId) {
+  const el = document.getElementById(containerId);
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🚆</div>
+      <div>এখনো কোনো live report নেই</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--accent2)">ট্রেনে থাকলে অবস্থান জানান!</div>
     </div>`;
     return;
   }
-
-  list.innerHTML = '';
-  trainList.forEach(r => {
+  el.innerHTML = '';
+  list.forEach(r => {
     const ago = Math.round((Date.now() - new Date(r.reported_at)) / 60000);
     const card = document.createElement('div');
-    card.className = `tcard reported${selectedTrainNum===r.train_number?' active':''}`;
+    card.className = `tcard running${selectedId===r.train_number?' active':''}`;
     card.innerHTML = `
       <div class="tc-top">
-        <div><div class="tc-name">${r.train_name}</div><div class="tc-num">#${r.train_number}</div></div>
-        <span class="tc-badge live">Live</span>
+        <div>
+          <div class="tc-name">${r.train_name}</div>
+          <div class="tc-num">#${r.train_number}</div>
+        </div>
+        <span class="tc-badge running">Live</span>
       </div>
-      <div class="tc-station">স্টেশন: <b>${r.station_name}</b></div>
-      <div class="tc-rep"><div class="rep-dot"></div>${ago === 0 ? 'এইমাত্র' : `${ago} মিনিট আগে`} reported</div>`;
-    card.onclick = () => focusTrain(r);
-    list.appendChild(card);
+      <div class="tc-route">স্টেশন: <b>${r.station_name}</b></div>
+      <div class="tc-ago"><div class="rep-dot"></div>${ago===0?'এইমাত্র':ago+' মিনিট আগে'} reported</div>`;
+    card.onclick = () => { focusTrain(r); if(isMobile) showMap(); };
+    el.appendChild(card);
   });
 }
 
 // =============================================
 // MAP MARKERS
 // =============================================
-function updateMapMarkers(trainList) {
-  // Remove old markers
+function updateMarkers(list) {
   Object.values(trainMarkers).forEach(m => map.removeLayer(m));
   trainMarkers = {};
 
-  trainList.forEach(r => {
+  list.forEach(r => {
     if (!r.lat || !r.lon) return;
-    const isSel = selectedTrainNum === r.train_number;
+    const isSel = selectedId === r.train_number;
     const ago = Math.round((Date.now() - new Date(r.reported_at)) / 60000);
+    const sz = isSel ? 36 : (isMobile ? 32 : 28);
 
-    const sz = isSel ? 36 : 28;
-    const pulse = isSel ? `<circle cx="18" cy="18" r="16" fill="#ff6b35" fill-opacity="0.12"><animate attributeName="r" values="13;17;13" dur="2s" repeatCount="indefinite"/></circle>` : '';
+    const pulse = isSel ? `<circle cx="18" cy="18" r="16" fill="#ff6b35" fill-opacity="0.1"><animate attributeName="r" values="12;17;12" dur="2s" repeatCount="indefinite"/></circle>` : '';
     const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
       ${pulse}
       <circle cx="18" cy="18" r="${isSel?14:11}" fill="#ff6b35" fill-opacity="0.25" stroke="#ff6b35" stroke-width="${isSel?2.5:1.5}"/>
-      <text x="18" y="23" font-size="${isSel?16:13}" text-anchor="middle">🚆</text>
+      <text x="18" y="23" font-size="${isSel?16:14}" text-anchor="middle">🚆</text>
     </svg>`;
 
-    const icon = L.divIcon({html:svg, className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2]});
-    const m = L.marker([r.lat, r.lon], {icon, zIndexOffset: isSel?1000:100}).addTo(map);
-
+    const icon = L.divIcon({html:svg,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
+    const m = L.marker([r.lat,r.lon],{icon,zIndexOffset:isSel?1000:100}).addTo(map);
     m.bindTooltip(`
       <div class="tt-name">${r.train_name} (#${r.train_number})</div>
-      <div class="tt-info">স্টেশন: ${r.station_name}</div>
-      <div class="tt-rep">👤 ${ago === 0 ? 'এইমাত্র' : ago+' মিনিট আগে'} যাত্রী report করেছেন</div>`,
-      {permanent:false, direction:'top', offset:[0,-14], opacity:1});
-
-    m.on('click', () => focusTrain(r));
+      <div class="tt-info">📍 ${r.station_name}</div>
+      <div class="tt-rep">👤 ${ago===0?'এইমাত্র':ago+' মিনিট আগে'} reported</div>`,
+      {permanent:false,direction:'top',offset:[0,-14],opacity:1});
+    m.on('click', () => { focusTrain(r); if(isMobile) showMap(); });
     trainMarkers[r.train_number] = m;
   });
 }
 
 function focusTrain(r) {
-  selectedTrainNum = r.train_number;
-  map.setView([r.lat, r.lon], 10, {animate:true});
+  selectedId = r.train_number;
+  map.setView([r.lat, r.lon], isMobile ? 10 : 9, {animate:true});
+  showDP(r);
   updateUI();
+}
+
+// =============================================
+// DETAIL PANEL
+// =============================================
+function showDP(r) {
+  const ago = Math.round((Date.now() - new Date(r.reported_at)) / 60000);
+  document.getElementById('dpName').textContent = `${r.train_name} (#${r.train_number})`;
+  document.getElementById('dpSub').textContent = `সর্বশেষ: ${r.station_name}`;
+  document.getElementById('dpTags').innerHTML = `
+    <span class="dp-tag running">Live Report</span>
+    <span class="dp-tag info">${ago===0?'এইমাত্র':ago+' মিনিট আগে'}</span>`;
+
+  document.getElementById('curPos').innerHTML = `
+    <div class="cp-train">🚆</div>
+    <div class="cp-info">
+      <div class="cp-seg">এখন: <span>${r.station_name}</span> এ/কাছে</div>
+      <div class="cp-next">একজন যাত্রী এই অবস্থান জানিয়েছেন</div>
+      <div class="cp-bar"><div class="cp-fill" style="width:60%"></div></div>
+    </div>`;
+
+  // Timeline from train route
+  const train = allTrains.find(t => t.number === r.train_number);
+  const tl = document.getElementById('dpTL');
+  tl.innerHTML = '';
+
+  if (train && train.route_stations) {
+    const route = train.route_stations;
+    const curIdx = route.findIndex(sid => {
+      const st = allStations.find(s=>s.id===sid);
+      return st && st.name === r.station_name;
+    });
+
+    route.forEach((sid, i) => {
+      const st = allStations.find(s=>s.id===sid);
+      if (!st) return;
+      const isDone = i < curIdx;
+      const isHere = i === curIdx;
+
+      if (i > 0) {
+        const conn = document.createElement('div');
+        conn.className = 'tconn'+(isDone?' done':'');
+        tl.appendChild(conn);
+      }
+      const stop = document.createElement('div');
+      stop.className = 'tstop';
+      stop.innerHTML = `
+        <div class="ts-dot ${isHere?'here':isDone?'done':''}"></div>
+        <div class="ts-name ${isHere?'here':isDone?'done':''}">${st.name}</div>`;
+      tl.appendChild(stop);
+    });
+
+    setTimeout(()=>{
+      const here = tl.querySelector('.ts-dot.here');
+      if (here) here.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+    },150);
+  }
+
+  document.getElementById('dp').classList.add('open');
+}
+
+function closeDP() {
+  document.getElementById('dp').classList.remove('open');
+  selectedId = null;
+  updateUI();
+}
+
+// =============================================
+// MOBILE NAVIGATION
+// =============================================
+function showMap() {
+  document.getElementById('mobileDrawer').classList.remove('open');
+  document.getElementById('btnMap').classList.add('active');
+  document.getElementById('btnList').classList.remove('active');
+}
+
+function showList() {
+  document.getElementById('mobileDrawer').classList.add('open');
+  document.getElementById('btnList').classList.add('active');
+  document.getElementById('btnMap').classList.remove('active');
+  closeDP();
 }
 
 // =============================================
 // MODAL
 // =============================================
-function openModal() {
-  // Populate train select
+function populateModal() {
   const tSel = document.getElementById('selectTrain');
-  tSel.innerHTML = '<option value="">— ট্রেন বেছে নিন —</option>';
-  TRAINS.forEach(t => {
+  tSel.innerHTML = '<option value="">— ট্রেন নির্বাচন করুন —</option>';
+  allTrains.forEach(t => {
     const opt = document.createElement('option');
     opt.value = t.number;
     opt.textContent = `${t.number} — ${t.name}`;
-    opt.dataset.route = JSON.stringify(t.route);
+    opt.dataset.route = JSON.stringify(t.route_stations || []);
+    opt.dataset.tid = t.id;
     tSel.appendChild(opt);
   });
 
-  // Populate all stations
-  const sSel = document.getElementById('selectStation');
-  sSel.innerHTML = '<option value="">— স্টেশন বেছে নিন —</option>';
-  Object.entries(ST).sort((a,b)=>a[1].name.localeCompare(b[1].name,'bn')).forEach(([id,st]) => {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = st.name;
-    sSel.appendChild(opt);
-  });
-
-  // When train selected, filter stations to route only
   tSel.onchange = () => {
-    const selected = tSel.options[tSel.selectedIndex];
-    if (!selected.value) return;
-    const route = JSON.parse(selected.dataset.route || '[]');
-    sSel.innerHTML = '<option value="">— স্টেশন বেছে নিন —</option>';
-    route.forEach(id => {
-      const st = ST[id];
+    const sel = tSel.options[tSel.selectedIndex];
+    if (!sel.value) return;
+    const route = JSON.parse(sel.dataset.route || '[]');
+    const sSel = document.getElementById('selectStation');
+    sSel.innerHTML = '<option value="">— স্টেশন নির্বাচন করুন —</option>';
+    route.forEach(sid => {
+      const st = allStations.find(s=>s.id===sid);
       if (!st) return;
       const opt = document.createElement('option');
-      opt.value = id;
+      opt.value = sid;
       opt.textContent = st.name;
       sSel.appendChild(opt);
     });
   };
 
+  // Populate all stations as fallback
+  const sSel = document.getElementById('selectStation');
+  sSel.innerHTML = '<option value="">— আগে ট্রেন বেছে নিন —</option>';
+}
+
+function openModal() {
   document.getElementById('modalBg').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
   document.getElementById('modalBg').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 async function submitReport() {
   const trainNum = document.getElementById('selectTrain').value;
   const stationId = document.getElementById('selectStation').value;
-
   if (!trainNum || !stationId) {
     showToast('⚠️ ট্রেন এবং স্টেশন দুটোই বেছে নিন');
     return;
@@ -496,16 +842,16 @@ async function submitReport() {
   btn.disabled = true;
   btn.textContent = 'পাঠানো হচ্ছে...';
 
-  const train = TRAINS.find(t => t.number === trainNum);
-  const station = ST[stationId];
+  const train = allTrains.find(t => t.number === trainNum);
+  const station = allStations.find(s => s.id === stationId);
 
-  const ok = await supa.insert('train_reports', {
+  const ok = await supa.post('train_reports', {
     train_number: trainNum,
-    train_name: train.name.split('(')[0].trim(),
+    train_name: train ? train.name.split('(')[0].trim() : trainNum,
     station_id: stationId,
-    station_name: station.name,
-    lat: station.lat,
-    lon: station.lon,
+    station_name: station ? station.name : stationId,
+    lat: station ? station.lat : 23.7,
+    lon: station ? station.lon : 90.4,
   });
 
   btn.disabled = false;
@@ -513,32 +859,38 @@ async function submitReport() {
 
   if (ok) {
     closeModal();
-    showToast('✅ আপনার report সফলভাবে পাঠানো হয়েছে! ধন্যবাদ।');
+    showToast('✅ ধন্যবাদ! আপনার report পাঠানো হয়েছে।');
     await fetchReports();
   } else {
-    showToast('❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    showToast('❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
   }
 }
 
-function showToast(msg) {
+function showToast(msg, duration=4000) {
   const t = document.getElementById('toast');
   document.getElementById('toastMsg').textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 4000);
+  setTimeout(()=>t.classList.remove('show'), duration);
 }
 
-// Close modal on background click
-document.getElementById('modalBg').onclick = (e) => {
+// Close modal on background tap
+document.getElementById('modalBg').onclick = e => {
   if (e.target === document.getElementById('modalBg')) closeModal();
 };
+
+// Handle resize
+window.addEventListener('resize', () => {
+  isMobile = window.innerWidth <= 768;
+});
 
 // =============================================
 // INIT
 // =============================================
-initMap();
-fetchReports();
-// Refresh every 30 seconds automatically
-setInterval(fetchReports, 30000);
+(async () => {
+  initMap();
+  await Promise.all([loadStaticData(), fetchReports()]);
+  setInterval(fetchReports, 30000);
+})();
 </script>
 </body>
 </html>
